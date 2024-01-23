@@ -4,20 +4,17 @@
 #include <unistd.h>
 
 #define SIZE 4
-#define UP(i, j) (array[(i) + SIZE * (j)])
-#define DOWN(i, j) (array[(i) + SIZE * (SIZE - 1 - (j))])
-#define LEFT(i, j) (array[SIZE * (i) + (j)])
-#define RIGHT(i, j) (array[SIZE * (i) + SIZE - 1 - (j)])
+#define ARRAY(i, j) (array[SIZE * (i) + (j)])
 #define SWAP(a, b) ((a) ^= (b) ^= (a) ^= (b))
 
-//cursor position
-#define CLEAR() printf("\033[2J") //clear screen
-#define SAVE() printf("\033[2s")  //save cursor position
+// cursor position
+#define CLEAR() printf("\033[2J") // clear screen
+#define CLEAR_LINE() printf("\r\033[K") //clear line
 #define SET(x, y) printf("\033[%d;%dH", x, y)
-#define SETMSG() SET(2 * SIZE + 4, 0)
 #define SETCOM() SET(2 * SIZE + 3, 0)
+#define SETMSG() SET(2 * SIZE + 4, 0)
 
-//font style
+// font style
 #define RESET() printf("\033[0m")
 #define RED() printf("\033[31m")
 
@@ -29,7 +26,7 @@ void init()
 		score = 0;
 		for (int i = 0; i < SIZE; i++)
 				for (int j = 0; j < SIZE; j++)
-						LEFT(i, j) = 0;
+						ARRAY(i, j) = 0;
 }
 
 void print()
@@ -44,10 +41,10 @@ void print()
 		for (int i = 0; i < SIZE; i++) {
 				printf("|");
 				for (int j = 0; j < SIZE; j++)
-						if (LEFT(i, j) == 0)
+						if (ARRAY(i, j) == 0)
 								printf("     |");
 						else
-								printf("%5d|", LEFT(i, j));
+								printf("%5d|", ARRAY(i, j));
 				puts("");
 				printf("|");
 				for (int i = 0; i < SIZE; i++)
@@ -67,108 +64,51 @@ void add()
 		array[index] = 2;
 }
 
-void up()
+void squeeze(int *(*array)(int, int))
 {
-		for (int i = 0; i < SIZE; i += 1) {
+		for (int i = 0; i < SIZE; i++) {
 				for (int current = 0; current + 1 < SIZE;) {
-						if (UP(i, current) && UP(i, current) == UP(i, current + 1)) { //current == next
-								score += UP(i, current);
-								UP(i, current) <<= 1;
-								UP(i, current + 1) = 0;
-						} else if (UP(i, current) && UP(i, current + 1)) { //current != next
+						if (*array(i, current) &&
+							*array(i, current) == *array(i, current + 1)) {
+								score += *array(i, current);
+								*array(i, current) <<= 1;
+								*array(i, current + 1) = 0;
+						} else if (*array(i, current) && *array(i, current + 1)) {
 								current++;
 								continue;
 						}
 						int j;
 						for (j = current + 1; j < SIZE; j++)
-								if (UP(i, j))
+								if (*array(i, j))
 										break;
-						if (j == SIZE || UP(i, j) == 0)
+						if (j == SIZE || *array(i, j) == 0)
 								break;
-						if (UP(i, current))
-								SWAP(UP(i, current + 1), UP(i, j));
+						if (*array(i, current))
+								SWAP(*array(i, current + 1), *array(i, j));
 						else
-								SWAP(UP(i, current), UP(i, j));
+								SWAP(*array(i, current), *array(i, j));
 				}
 		}
 }
 
-void down()
+int *up(int i, int j)
 {
-		for (int i = 0; i < SIZE; i++) {
-				for (int current = 0; current + 1 < SIZE;) {
-						if (DOWN(i, current) && DOWN(i, current) == DOWN(i, current + 1)) { //current == next
-								score += DOWN(i, current);
-								DOWN(i, current) <<= 1;
-								DOWN(i, current + 1) = 0;
-						} else if (DOWN(i, current) && DOWN(i, current + 1)) { //current != next
-								current++;
-								continue;
-						}
-						int j;
-						for (j = current + 1; j < SIZE; j++)
-								if (DOWN(i, j))
-										break;
-						if (j == SIZE || DOWN(i, j) == 0)
-								break;
-						if (DOWN(i, current))
-								SWAP(DOWN(i, current + 1), DOWN(i, j));
-						else
-								SWAP(DOWN(i, current), DOWN(i, j));
-				}
-		}
+		return &array[i + SIZE * j];
 }
 
-void left()
+int *down(int i, int j)
 {
-		for (int i = 0; i < SIZE; i++) {
-				for (int current = 0; current + 1 < SIZE;) {
-						if (LEFT(i, current) && LEFT(i, current) == LEFT(i, current + 1)) { //current == next
-								score += LEFT(i, current);
-								LEFT(i, current) <<= 1;
-								LEFT(i, current + 1) = 0;
-						} else if (LEFT(i, current) && LEFT(i, current + 1)) { //current != next
-								current++;
-								continue;
-						}
-						int j;
-						for (j = current + 1; j < SIZE; j++)
-								if (LEFT(i, j))
-										break;
-						if (j == SIZE || LEFT(i, j) == 0)
-								break;
-						if (LEFT(i, current))
-								SWAP(LEFT(i, current + 1), LEFT(i, j));
-						else
-								SWAP(LEFT(i, current), LEFT(i, j));
-				}
-		}
+		return &array[i + SIZE * (SIZE - 1 - j)];
 }
 
-void right()
+int *left(int i, int j)
 {
-		for (int i = 0; i < SIZE; i++) {
-				for (int current = 0; current + 1 < SIZE;) {
-						if (RIGHT(i, current) && RIGHT(i, current) == RIGHT(i, current + 1)) { //current == next
-								score += RIGHT(i, current);
-								RIGHT(i, current) <<= 1;
-								RIGHT(i, current + 1) = 0;
-						} else if (RIGHT(i, current) && RIGHT(i, current + 1)) { //current != next
-								current++;
-								continue;
-						}
-						int j;
-						for (j = current + 1; j < SIZE; j++)
-								if (RIGHT(i, j))
-										break;
-						if (j == SIZE || RIGHT(i, j) == 0)
-								break;
-						if (RIGHT(i, current))
-								SWAP(RIGHT(i, current + 1), RIGHT(i, j));
-						else
-								SWAP(RIGHT(i, current), RIGHT(i, j));
-				}
-		}
+		return &array[SIZE * i + j];
+}
+
+int *right(int i, int j)
+{
+		return &array[SIZE * i + SIZE - 1 - j];
 }
 
 int main()
@@ -181,31 +121,33 @@ start:
 		print();
 		while (1) {
 				SETCOM();
+				CLEAR_LINE();
 				printf("command: ");
 				char command = getchar();
 				switch (command) {
 				case 'w':
-						up();
+						squeeze(up);
 						add();
 						print();
 						break;
 				case 'a':
-						left();
+						squeeze(left);
 						add();
 						print();
 						break;
 				case 's':
-						down();
+						squeeze(down);
 						add();
 						print();
 						break;
 				case 'd':
-						right();
+						squeeze(right);
 						add();
 						print();
 						break;
 				case 'q':
 						SETMSG();
+						CLEAR_LINE();
 						RED();
 						puts("Game Over!");
 						RESET();
@@ -216,6 +158,7 @@ start:
 						break;
 				default:
 						SETMSG();
+						CLEAR_LINE();
 						RED();
 						puts("Invalid input!");
 						RESET();
